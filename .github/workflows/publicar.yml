@@ -1,1 +1,90 @@
+name: Publicar version
 
+# Se lanza a mano: pestana Actions > "Publicar version" > Run workflow.
+on:
+  workflow_dispatch:
+    inputs:
+      subida:
+        description: "Que numero sube: minor (1.0.0 -> 1.1.0), patch (1.0.0 -> 1.0.1) o major (1.0.0 -> 2.0.0)"
+        type: choice
+        options: [minor, patch, major]
+        default: minor
+      notas:
+        description: "Novedades de esta version (opcional)"
+        type: string
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar el repositorio
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Pruebas
+        shell: pwsh
+        run: ./tests/comprobar.ps1 -Bat ./Lanzador-scrcpy.bat
+
+      - name: Calcular la version
+        id: version
+        env:
+          SUBIDA: ${{ inputs.subida }}
+        run: |
+          ultima=$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n 1)
+          if [ -z "$ultima" ]; then
+            nueva="1.0.0"
+          else
+            IFS=. read -r ma mi pa <<< "${ultima#v}"
+            case "$SUBIDA" in
+              major) nueva="$((ma + 1)).0.0" ;;
+              patch) nueva="$ma.$mi.$((pa + 1))" ;;
+              *)     nueva="$ma.$((mi + 1)).0" ;;
+            esac
+          fi
+          echo "Ultima: ${ultima:-ninguna} -> nueva: v$nueva"
+          echo "version=$nueva" >> "$GITHUB_OUTPUT"
+
+      - name: Preparar los archivos
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          mkdir -p dist
+          python3 scripts/poner_version.py Lanzador-scrcpy.bat dist/Lanzador-scrcpy.bat "$VERSION"
+          (cd dist && sha256sum Lanzador-scrcpy.bat > SHA256SUMS.txt && cat SHA256SUMS.txt)
+
+      - name: Comprobar el archivo final
+        shell: pwsh
+        run: ./tests/comprobar.ps1 -Bat ./dist/Lanzador-scrcpy.bat
+
+      - name: Publicar la release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+          NOTAS: ${{ inputs.notas }}
+        run: |
+          {
+            if [ -n "$NOTAS" ]; then
+              echo "## Novedades"
+              echo
+              echo "$NOTAS"
+              echo
+            fi
+            cat .github/notas-release.md
+            echo
+            echo "Instrucciones completas en el [README]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY#readme)."
+            echo
+            echo "**SHA-256**"
+            echo
+            echo '```'
+            cat dist/SHA256SUMS.txt
+            echo '```'
+          } > notas.md
+          gh release create "v$VERSION" dist/Lanzador-scrcpy.bat dist/SHA256SUMS.txt \
+            --title "Lanzador de scrcpy v$VERSION" \
+            --notes-file notas.md \
+            --target "$GITHUB_SHA"

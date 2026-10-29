@@ -1,0 +1,19 @@
+name: Pruebas
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  pruebas:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar el repositorio
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Comprobar el lanzador
+        shell: pwsh
+        run: ./tests/comprobar.ps1 -Bat ./Lanzador-scrcpy.bat
