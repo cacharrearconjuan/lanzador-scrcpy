@@ -1,0 +1,73 @@
+1. Instalar Git Bash y adb
+
+Instala Git for Windows (git-scm.com), que trae Git Bash.
+Descarga platform-tools de la página oficial de Google: developer.android.com/tools/releases/platform-tools, enlace «Download SDK Platform-Tools for Windows».
+Descomprímelo en C:\. Te queda C:\platform-tools\adb.exe.
+Abre Git Bash. A partir de aquí, todo se escribe ahí. Escribe esto una sola vez:
+echo 'export PATH="/c/platform-tools:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+adb version
+
+2. En el Fire TV
+
+Ve a Configuración › Mi Fire TV › Acerca de y pulsa OK 7 veces sobre el nombre del dispositivo. Se activan las opciones para desarrolladores.
+Vuelve a Mi Fire TV › Opciones para desarrolladores › Depuración ADB: activada.
+Apunta la IP, que está en Mi Fire TV › Acerca de › Red.
+
+3. Descargar dumbtv y conectarse
+
+cd ~
+git clone https://github.com/humblemuzzu/dumbtv
+cd dumbtv
+adb connect IP_DEL_FIRETV:5555
+La primera vez sale en la tele «¿Permitir depuración USB?». Marca «Permitir siempre desde este ordenador» y pulsa OK.
+Comprueba con adb devices: debe poner device. Si pone unauthorized, falta aceptar el aviso.
+Si tienes más de un aparato conectado por adb, indica cuál es el stick: export ADB_SERIAL=IP_DEL_FIRETV:5555.
+
+4. Limpiar
+
+4A. Diagnóstico, que no cambia nada:
+
+./scripts/preflight.sh
+
+Dice qué aparato es, qué cambiaría y guarda una foto de los ajustes para poder deshacerlo.
+
+4B. Proceso completo:
+
+./scripts/all.sh
+
+Te hace estas preguntas:
+
+Pregunta	Qué contestar
+Prime Video	sí, si lo ves
+Alexa y el botón de voz	sí, si lo usas
+Pantalla de inicio dumbtv home	sí
+Filtro DNS	sí
+SmartTube	opcional
+Apps que quitar	ninguna (Enter)
+
+Después pide confirmación antes de cada paso y reinicia el stick dos veces, unos 5 minutos en total.
+
+4C. Comprobar:
+
+./scripts/verify.sh
+
+./scripts/dnsfilter.sh -y
+./scripts/launcher.sh -y
+./scripts/verify.sh
+
+Todo debe salir en ok o skip. Ningún FAIL.
+
+Parte B: deshacer
+
+Desde la misma carpeta (no la borres: ahí está la foto de los ajustes, en report/):
+   cd ~/dumbtv
+   ./scripts/restore.sh
+
+Reactiva todo lo desactivado, devuelve los ajustes de antes, quita la VPN del filtro, devuelve HOME a Amazon y reinicia.
+2. Enseña que vuelve la portada de Amazon con sus anuncios.
+3. restore.sh deja instaladas, pero apagadas, las apps que añadió. Cuando termine de reiniciarse, vuelve a conectar y bórralas:
+
+   adb connect IP_DEL_FIRETV:5555
+   adb uninstall dnsfilter.android
+   adb uninstall tv.dumbtv.home
