@@ -74,7 +74,15 @@ jobs:
               echo "$NOTAS"
               echo
             fi
-            cat .github/notas-release.md
+            cat <<'FIN'
+          ## Cómo usarlo
+
+          1. Descarga **`Lanzador-scrcpy.bat`** (abajo, en *Assets*).
+          2. Haz doble clic. La primera vez instala scrcpy solo en `C:\`.
+          3. Escribe la IP del dispositivo **sin puntos**: con 3 cifras el punto sale solo; con 1 o 2, pulsa **Enter**.
+
+          Si Windows muestra «Windows protegió su PC», pulsa **Más información → Ejecutar de todas formas**.
+          FIN
             echo
             echo "Instrucciones completas en el [README]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY#readme)."
             echo
