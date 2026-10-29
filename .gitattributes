@@ -1,0 +1,3 @@
+# El .bat tiene que llegar tal cual (con finales de linea de Windows, CRLF).
+# Sin esto, Git podria cambiarlos y el lanzador dejaria de funcionar.
+*.bat -text
